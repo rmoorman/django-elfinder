@@ -24,6 +24,7 @@ class Directory(MPTTModel, FileCollectionChildMixin):
     """
     name = models.CharField(max_length=255)
     parent = TreeForeignKey('self', null=True, blank=True, related_name='dirs')
+    collection = models.ForeignKey('FileCollection')
 
     class Meta:
         verbose_name_plural = 'directories'
@@ -127,6 +128,7 @@ class File(models.Model, FileCollectionChildMixin):
     parent = TreeForeignKey(Directory, null=True, blank=True,
                             related_name='files')
     content = models.TextField(max_length=2048, blank=True)
+    collection = models.ForeignKey('FileCollection')
 
     class Meta:
         unique_together = ('name', 'parent')

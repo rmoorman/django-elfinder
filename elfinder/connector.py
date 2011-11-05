@@ -39,7 +39,7 @@ class connector():
                              'name', 'content', 'src', 'dst', 'cut', 'init',
                              'type', 'width', 'height', 'upload[]')
 
-    def __init__(self, collection, options, read_file_view=None):
+    def __init__(self, collection, options, read_file_view=None, volumes={}):
         self.collection = collection
         self.options = options
         self.httpResponse = {}
@@ -48,6 +48,7 @@ class connector():
         self._GET = {}
         self._response = {}
         self.return_view = None
+        self.volumes = volumes
 
         # Use the default read_file view if one has not been specified.
         # It is imported here to prevent circular imports.
@@ -266,7 +267,8 @@ class connector():
         name = self._GET['name'].replace('+', ' ')
 
         new_obj = model(name=name,
-                        parent=parent)
+                        parent=parent,
+                        collection=self.collection)
         try:
             new_obj.validate_unique()
         except ValidationError, e:
@@ -277,7 +279,7 @@ class connector():
         try:
             new_obj.save()
         except Exception, e:
-            self._repsonse['error'] = 'Could not create new object'
+            self._response['error'] = 'Could not create new object'
             logger.exception(e)
 
         # The client expects 'added' to be a list of new items.
