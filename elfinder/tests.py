@@ -6,14 +6,14 @@ import json
 import logging
 
 
-# Disable logging when running tests
-logging.disable(logging.CRITICAL)
-
-
 class elFinderTest(TestCase):
     """ Tests basic template functionality.
     """
     fixtures = ['testdata.json']
+
+    def setUp(self):
+        # Disable logging when running tests
+        logging.disable(logging.CRITICAL)
 
     def test_elfinder_index(self):
         """ Ensures that the elfinder.html template is used, and coll_id is in
@@ -37,7 +37,10 @@ class elFinderCmdTest(TestCase):
     fixtures = ['testdata.json']
 
     def setUp(self):
+        # Disable logging when running tests
+        logging.disable(logging.CRITICAL)
         self.collection = FileCollection.objects.get(pk=1)
+
 
     def get_command_response(self, variables={}):
         """ Helper function to issue commands to the connector.
@@ -116,7 +119,7 @@ class elFinderMkdirCmd(elFinderCmdTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Invalid parent directory')
 
-    def test_duplicate_name(self):
+    def test_duplicate_dir_name(self):
         """ Try to create two dirs with the same name and ensure it fails.
         """
         vars = ({'cmd': 'mkdir',
@@ -139,11 +142,11 @@ class elFinderMkfileCmd(elFinderCmdTest):
     def test_valid_mkfile(self):
         vars = ({'cmd': 'mkfile',
                  'target': self.collection.root_node.get_hash(),
-                 'name': 'dupe_filename_test'})
+                 'name': 'test file.txt'})
         response = self.get_json_response(vars)
         self.assertEqual(response.status_code, 200)
 
-    def test_duplicate_name(self):
+    def test_duplicate_filename(self):
         """ Try to create two files with the same name and ensure it fails.
         """
         vars = ({'cmd': 'mkfile',
@@ -180,7 +183,7 @@ class elFinderFileCmd(elFinderCmdTest):
 
     def test_valid_file(self):
         vars = ({'cmd': 'file',
-                 'target': 'f%s' % self.file.id})
+                 'target': self.file.get_hash()})
         response = self.get_command_response(vars)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'read_file.html')
@@ -189,7 +192,7 @@ class elFinderFileCmd(elFinderCmdTest):
 
     def test_invalid_file(self):
         vars = ({'cmd': 'file',
-                 'target': 'f1234'})
+                 'target': 'fc1_f1234'})
         response = self.get_json_response(vars, fail_on_error=False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Could not open target')

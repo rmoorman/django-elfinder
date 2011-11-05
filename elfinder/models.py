@@ -34,7 +34,7 @@ class Directory(MPTTModel, FileCollectionChildMixin):
         return self.name
 
     def get_hash(self):
-        return 'd%s' % self.id
+        return '%s_d%s' % (self.collection.get_volume_id(), self.id)
 
     def get_info(self):
         """ Returns an object to represent this object in elFinder. Populates
@@ -55,8 +55,7 @@ class Directory(MPTTModel, FileCollectionChildMixin):
                }
 
         if not self.parent:
-            obj['volume_id'] = 'fc%s_' % self.filecollection.id
-            #obj['volume_id'] = 'fc%s_' % '1234'
+            obj['volume_id'] = self.collection.get_volume_id()
             obj['locked'] = 1
 
         return obj
@@ -120,6 +119,9 @@ class FileCollection(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_volume_id(self):
+        return 'fc%s' % self.id
+
 
 class File(models.Model, FileCollectionChildMixin):
     """ A File in a FileCollection.
@@ -137,7 +139,7 @@ class File(models.Model, FileCollectionChildMixin):
         return self.name
 
     def get_hash(self):
-        return 'f%s' % self.id
+        return '%s_f%s' % (self.collection.get_volume_id(), self.id)
 
     def get_info(self):
         """ Returns an object to represent this object in elFinder. Populates

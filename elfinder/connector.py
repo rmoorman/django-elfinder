@@ -75,22 +75,24 @@ class connector():
             If the target does not belong to the current tree, return the root
             of the current tree instead.
         """
-        if hash == '':
+        volume_id, target = hash.split('_')
+
+        if target == '':
             # No target has been specified or the root dir is the target
             return self.collection.root_node, Directory
 
         try:
-            object_id = int(hash[1:])
+            object_id = int(target[1:])
         except ValueError:
-            logger.error('Invalid target hash: %s' % hash)
-            raise Exception('Invalid target hash')
+            logger.error('Invalid target hash: %s' % target)
+            raise Exception('Invalid target hash: %s' % target)
 
         current_tree_id = self.collection.root_node.tree_id
 
-        if hash[0] == 'f':
+        if target[0] == 'f':
             model = File
             query = {'pk': object_id, 'parent__tree_id': current_tree_id}
-        elif hash[0] == 'd':
+        elif target[0] == 'd':
             model = Directory
             query = {'pk': object_id, 'tree_id': current_tree_id}
         else:
@@ -256,10 +258,9 @@ class connector():
         """
         from django.core.exceptions import ValidationError
 
-        parent_id = self._GET['target']
         try:
-            parent = Directory.objects.get(pk=parent_id[1:])
-        except (ValueError, Directory.DoesNotExist), e:
+            parent, parent_model = self._get_object_by_hash(self._GET['target'])
+        except Exception, e:
             self._response['error'] = 'Invalid parent directory'
             logger.exception(e)
             return
@@ -269,6 +270,7 @@ class connector():
         new_obj = model(name=name,
                         parent=parent,
                         collection=self.collection)
+        
         try:
             new_obj.validate_unique()
         except ValidationError, e:
