@@ -3,8 +3,9 @@ from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from django.utils import simplejson as json
 from django.template import RequestContext
-from elfinder.connector import connector
+from elfinder.connector import ElFinderConnector
 from elfinder.models import FileCollection
+from elfinder.volume_drivers.model_driver import ModelVolumeDriver
 
 
 def index(request, coll_id):
@@ -20,9 +21,10 @@ def index(request, coll_id):
 def connector_view(request, coll_id):
     """ Handles requests for the elFinder connector.
     """
-    collection = FileCollection.objects.get(pk=coll_id)
-    finder_opts = {}
-    finder = connector(collection, finder_opts)
+
+    model_volume = ModelVolumeDriver(coll_id)
+
+    finder = ElFinderConnector([model_volume])
     finder.run(request)
 
     # Some commands (e.g. read file) will return a Django View - if it
@@ -30,24 +32,22 @@ def connector_view(request, coll_id):
     if finder.return_view:
         return finder.return_view
 
-    ret = HttpResponse(mimetype=finder.httpHeader['Content-type'])
-
+    response = HttpResponse(mimetype=finder.httpHeader['Content-type'])
+    response.status_code = finder.httpStatusCode
     if finder.httpHeader['Content-type'] == 'application/json':
-        ret.content = json.dumps(finder.httpResponse)
+        response.content = json.dumps(finder.httpResponse)
     else:
-        ret.content = finder.httpResponse
-    ret.status_code = finder.httpStatusCode
+        response.content = finder.httpResponse
 
-    return ret
+    return response
 
 
-def read_file(request, file, collection):
+def read_file(request, volume, file_hash, template="read_file.html"):
     """ Default view for responding to "open file" requests.
 
         coll: FileCollection this File belongs to
         file: The requested File object
     """
-    return render_to_response("read_file.html",
-                              {'coll': collection,
-                               'file': file},
+    return render_to_response(template,
+                              {'file': file_hash},
                               RequestContext(request))

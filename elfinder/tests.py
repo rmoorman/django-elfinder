@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.core.urlresolvers import reverse
 from elfinder.models import FileCollection, Directory, File
-from elfinder.exceptions import InvalidTarget
+from elfinder.volume_drivers.model_driver import ModelVolumeDriver
 import json
 import logging
 
@@ -27,6 +27,22 @@ class elFinderTest(TestCase):
         self.assertEqual(response.context['coll_id'], self.collection.id)
 
 
+class elFinderFileCollectionTest(TestCase):
+    """ Tests functions related to creating/editing FileCollection objects.
+    """
+    def setUp(self):
+        # Disable logging when running tests
+        logging.disable(logging.CRITICAL)
+
+    def test_new_filecollection(self):
+        new_coll = FileCollection(name='test')
+        new_coll.save()
+        # Make sure the root dir was created
+        volume = ModelVolumeDriver(new_coll.id)
+        volume_info = volume.get_info('')
+        self.assertEqual(volume_info['name'], 'test')
+
+
 class elFinderCmdTest(TestCase):
     """ Base class for testing connector commands.
 
@@ -40,7 +56,7 @@ class elFinderCmdTest(TestCase):
         # Disable logging when running tests
         logging.disable(logging.CRITICAL)
         self.collection = FileCollection.objects.get(pk=1)
-
+        self.volume = ModelVolumeDriver(1)
 
     def get_command_response(self, variables={}):
         """ Helper function to issue commands to the connector.
@@ -66,11 +82,16 @@ class elFinderCmdTest(TestCase):
         return response
 
 
-class elFinderUnknownCmd(elFinderCmdTest):
+class elFinderInvalidCmds(elFinderCmdTest):
     def test_unknown_cmd(self):
         response = self.get_json_response({'cmd': 'invalid_cmd_test'}, False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Unknown command')
+
+    def test_no_cmd(self):
+        response = self.get_json_response({}, False)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['error'], 'No command specified')
 
 
 class elFinderOpenCmd(elFinderCmdTest):
@@ -80,16 +101,29 @@ class elFinderOpenCmd(elFinderCmdTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Invalid arguments')
 
-    def test_valid_open(self):
+    def test_valid_open_empty_target(self):
         vars = ({'cmd': 'open',
-                 'target': self.collection.root_node.get_hash(),
+                 'target': ''})
+        response = self.get_json_response(vars)
+        self.assertEqual(response.status_code, 200)
+
+    def test_valid_open_empty_target_with_tree(self):
+        vars = ({'cmd': 'open',
+                 'target': '',
+                 'tree': 1})
+        response = self.get_json_response(vars)
+        self.assertEqual(response.status_code, 200)
+
+    def test_valid_open_with_tree(self):
+        vars = ({'cmd': 'open',
+                 'target': 'fc1_d2',
                  'tree': 1})
         response = self.get_json_response(vars)
         self.assertEqual(response.status_code, 200)
 
     def test_valid_open_with_init(self):
         vars = ({'cmd': 'open',
-                 'target': self.collection.root_node.get_hash(),
+                 'target': 'fc1_d2',
                  'tree': 1,
                  'init': 1})
         response = self.get_json_response(vars)
@@ -106,7 +140,7 @@ class elFinderMkdirCmd(elFinderCmdTest):
 
     def test_valid_mkdir(self):
         vars = ({'cmd': 'mkdir',
-                 'target': self.collection.root_node.get_hash(),
+                 'target': 'fc1_d1',
                  'name': 'new dir'})
         response = self.get_json_response(vars)
         self.assertEqual(response.status_code, 200)
@@ -117,13 +151,14 @@ class elFinderMkdirCmd(elFinderCmdTest):
                                            'name': 'new dir'},
                                            fail_on_error=False)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json['error'], 'Invalid parent directory')
+        expected_error = 'Invalid target hash: '
+        self.assertTrue(response.json['error'].startswith(expected_error))
 
     def test_duplicate_dir_name(self):
         """ Try to create two dirs with the same name and ensure it fails.
         """
         vars = ({'cmd': 'mkdir',
-                 'target': self.collection.root_node.get_hash(),
+                 'target': 'fc1_d1',
                  'name': 'dupe_dir_test'})
         response = self.get_json_response(vars)
         response = self.get_json_response(vars, fail_on_error=False)
@@ -141,7 +176,7 @@ class elFinderMkfileCmd(elFinderCmdTest):
 
     def test_valid_mkfile(self):
         vars = ({'cmd': 'mkfile',
-                 'target': self.collection.root_node.get_hash(),
+                 'target': 'fc1_d1',
                  'name': 'test file.txt'})
         response = self.get_json_response(vars)
         self.assertEqual(response.status_code, 200)
@@ -150,7 +185,7 @@ class elFinderMkfileCmd(elFinderCmdTest):
         """ Try to create two files with the same name and ensure it fails.
         """
         vars = ({'cmd': 'mkfile',
-                 'target': self.collection.root_node.get_hash(),
+                 'target': 'fc1_d1',
                  'name': 'dupe_filename_test'})
         response = self.get_json_response(vars)
         response = self.get_json_response(vars, fail_on_error=False)
@@ -161,16 +196,16 @@ class elFinderMkfileCmd(elFinderCmdTest):
 
 class elFinderParentsCmd(elFinderCmdTest):
     def test_valid_parents(self):
-        vars = ({'cmd': 'parents',
-                 'target': self.collection.root_node.get_hash()})
+        vars = {'cmd': 'parents',
+                'target': 'fc1_d1'}
         response = self.get_json_response(vars)
         self.assertEqual(response.status_code, 200)
 
 
 class elFinderTreeCmd(elFinderCmdTest):
     def test_valid_tree(self):
-        vars = ({'cmd': 'tree',
-                 'target': self.collection.root_node.get_hash()})
+        vars = {'cmd': 'tree',
+                'target': 'fc1_d1'}
         response = self.get_json_response(vars)
         self.assertEqual(response.status_code, 200)
 
@@ -182,12 +217,11 @@ class elFinderFileCmd(elFinderCmdTest):
         self.file = File.objects.get(pk=1)
 
     def test_valid_file(self):
-        vars = ({'cmd': 'file',
-                 'target': self.file.get_hash()})
+        vars = {'cmd': 'file',
+                'target': 'fc1_f1'}
         response = self.get_command_response(vars)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'read_file.html')
-        self.assertEqual(response.context['coll'], self.collection)
         self.assertEqual(response.context['file'], self.file)
 
     def test_invalid_file(self):
@@ -196,3 +230,12 @@ class elFinderFileCmd(elFinderCmdTest):
         response = self.get_json_response(vars, fail_on_error=False)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Could not open target')
+
+    def test_invalid_targets(self):
+        for target in ['bad-target', 'fc1_bad', 'fc1_', 'fc1_x1']:
+            vars = {'cmd': 'file',
+                    'target': target}
+            response = self.get_json_response(vars, fail_on_error=False)
+            self.assertEqual(response.status_code, 200)
+            expected_error = 'Invalid target hash: '
+            self.assertTrue(response.json['error'].startswith(expected_error))

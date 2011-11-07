@@ -1,4 +1,6 @@
 from django.db import models
+from django.dispatch import receiver
+from django.db.models.signals import pre_delete
 from mptt.models import MPTTModel, TreeForeignKey
 
 
@@ -50,49 +52,15 @@ class Directory(MPTTModel, FileCollectionChildMixin):
                'read': 1,
                'write': 1,
                'size': 0,
-               'date': 'Today 10:00',
                'dirs': 0 if (self.dirs.count() == 0) else 1
                }
 
         if not self.parent:
             obj['volume_id'] = self.collection.get_volume_id()
             obj['locked'] = 1
+            obj['name'] = self.collection.name
 
         return obj
-
-    def get_tree(self, ancestors=False, siblings=False, children=False):
-        """ Returns a list of dicts containing information about all dirs in
-            tree. Note, this is not a tree in the hierarchial sense - we return
-            a flat list here, and the client makes it in to a hierarchial tree
-            using the hash/phash (parent hash) values in each dict.
-
-            The boolean values control what content is included in the tree.
-            Any of ancestors, siblings and children may be included.
-
-            The function provides data for the 'tree' and 'parents' commands.
-        """
-        tree = []
-
-        if ancestors:
-            for item in self.get_ancestors(include_self=True):
-                tree.append(item.get_info())
-                for ancestor_sibling in item.get_siblings():
-                    tree.append(ancestor_sibling.get_info())
-
-        # Only return siblings for non-root nodes
-        if siblings and self.parent:
-            for item in self.get_siblings():
-                tree.append(item.get_info())
-
-        if children:
-            # Add child directories
-            for item in self.get_children():
-                tree.append(item.get_info())
-            # Add child files
-            for item in self.files.all():
-                tree.append(item.get_info())
-
-        return tree
 
 
 class FileCollection(models.Model):
@@ -102,19 +70,18 @@ class FileCollection(models.Model):
     """
     name = models.CharField(max_length=255, unique=True)
     #tree_id = models.CharField(
-    root_node = models.OneToOneField(Directory)
+    #root_node = models.OneToOneField(Directory)
 
     def save(self, *args, **kwargs):
-        """ Creates a Directory (root node) before saving. As the Directory
-            does not have a parent it causes a new MPTT Tree to be created. 
-            The ID of this store is stored on the FileCollection model so
-            we can find its dirs/files later.
+        """ Creates a Directory (root node) when the FileCollection is first
+            created.
         """
-        # TODO test this properly
-        if not self.id and not self.root_node:
-            self.root_node = Directory(name='test')
-            self.root_node.save()
+        created = (self.id is None)
         super(FileCollection, self).save(*args, **kwargs)
+        if created:
+            root_dir = Directory(name='root_node_%s' % self.id,
+                                 collection=self)
+            root_dir.save()
 
     def __unicode__(self):
         return self.name
