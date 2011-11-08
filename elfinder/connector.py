@@ -50,6 +50,7 @@ class ElFinderConnector():
                 'parents': ('__parents', {'target': True}),
                 'mkdir': ('__mkdir', {'target': True, 'name': True}),
                 'mkfile': ('__mkfile', {'target': True, 'name': True}),
+                'rename': ('__rename', {'target': True, 'name': True}),
                }
 
     def get_init_params(self):
@@ -261,3 +262,8 @@ class ElFinderConnector():
         target = self.GET['target']
         volume = self.get_volume(target)
         self.response['added'] = [volume.mkfile(self.GET['name'], target)]
+
+    def __rename(self):
+        target = self.GET['target']
+        volume = self.get_volume(target)
+        self.response.update(volume.rename(self.GET['name'], target))

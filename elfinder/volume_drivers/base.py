@@ -60,3 +60,13 @@ class BaseVolumeDriver(object):
             :returns: dict -- a dict describing the new file.
         """
         raise NotImplementedError
+
+    def rename(self, name, target):
+        """ Renames a file or directory.
+
+            :param name: The new name of the file/directory.
+            :param target: The hash of the target file/directory.
+            :returns: dict -- a dict describing which objects were added and
+            removed.
+        """
+        raise NotImplementedError

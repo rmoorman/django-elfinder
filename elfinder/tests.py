@@ -210,8 +210,26 @@ class elFinderTreeCmd(elFinderCmdTest):
         self.assertEqual(response.status_code, 200)
 
 
-class elFinderFileCmd(elFinderCmdTest):
+class elFinderRenameCmd(elFinderCmdTest):
+    def test_valid_name(self):
+        vars = {'cmd': 'rename',
+                'target': 'fc1_f1',
+                'name': 'new_name.html'}
+        response = self.get_json_response(vars)
+        self.assertEqual(response.status_code, 200)
+        added = response.json['added']
+        removed = response.json['removed']
+        self.assertEqual(added[0]['name'], 'new_name.html')
+        self.assertEqual(removed[0], 'fc1_f1')
 
+    def test_missing_name(self):
+        vars = {'cmd': 'rename',
+                'target': 'fc1_f1'}
+        response = self.get_json_response(vars, fail_on_error=False)
+        self.assertEqual(response.json['error'], 'Invalid arguments')
+
+
+class elFinderFileCmd(elFinderCmdTest):
     def setUp(self):
         super(elFinderFileCmd, self).setUp()
         self.file = File.objects.get(pk=1)

@@ -136,3 +136,11 @@ class ModelVolumeDriver(BaseVolumeDriver):
     def mkfile(self, name, parent):
         """ Creates a new file. """
         return self._create_object(name, parent, self.file_model)
+
+    def rename(self, name, target):
+        """ Renames a file or directory. """
+        object = self.get_object(target)
+        object.name = name
+        object.save()
+        return {'added': [object.get_info()],
+                'removed': [target]}
