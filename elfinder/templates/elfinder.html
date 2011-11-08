@@ -25,8 +25,15 @@
                             ['rename'],
                             ['view'],
                          ]
-                       }
-                        
+                        },
+            contextmenu : { navbar : ['open', '|', 'copy', 'cut', 'paste', '|',
+                                      'rm'],
+                            cwd : ['reload', 'back', '|',
+                                   'mkdir', 'mkfile', 'paste'],
+                            files : ['edit', 'open', '|',
+                                     'copy', 'cut', 'paste', '|',
+                                     'rm', 'rename'],
+                          }
         }).elfinder('instance');            
         });
     </script>
