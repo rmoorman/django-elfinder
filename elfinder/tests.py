@@ -228,6 +228,20 @@ class elFinderRenameCmd(elFinderCmdTest):
         response = self.get_json_response(vars, fail_on_error=False)
         self.assertEqual(response.json['error'], 'Invalid arguments')
 
+class elFinderListCmd(elFinderCmdTest):
+    def test_valid_dir(self):
+        vars = {'cmd': 'ls',
+                'target': 'fc1_d1'}
+        response = self.get_json_response(vars)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json['list']), 2)
+
+    def test_invalid_dir(self):
+        vars = {'cmd': 'ls',
+                'target': 'fc1_d1234'}
+        response = self.get_json_response(vars, fail_on_error=False)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['error'], 'Could not open target')
 
 class elFinderFileCmd(elFinderCmdTest):
     def setUp(self):

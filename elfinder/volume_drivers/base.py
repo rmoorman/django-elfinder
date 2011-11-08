@@ -70,3 +70,12 @@ class BaseVolumeDriver(object):
             removed.
         """
         raise NotImplementedError
+
+    def list(self, target):
+        """ Lists the contents of a directory.
+
+            :param target: The hash of the target directory.
+            :returns: list -- a list containing the names of files/directories
+            in this directory.
+        """
+        raise NotImplementedError
