@@ -32,6 +32,9 @@ class ModelVolumeDriver(BaseVolumeDriver):
     def get_tree(self, target, ancestors=False, siblings=False):
         """ Returns a list of dicts describing children/ancestors/siblings of
             the target directory.
+
+            Siblings of the root node are always excluded, as they refer to
+            root directories of other file collections.
         """
         dir = self.get_object(target)
         tree = []
@@ -47,12 +50,14 @@ class ModelVolumeDriver(BaseVolumeDriver):
             for item in dir.get_ancestors(include_self=True):
                 tree.append(item.get_info())
                 for ancestor_sibling in item.get_siblings():
-                    tree.append(ancestor_sibling.get_info())
+                    if ancestor_sibling.parent:
+                        tree.append(ancestor_sibling.get_info())
 
         # Finally add siblings, if required
         if siblings:
             for item in dir.get_siblings():
-                tree.append(item.get_info())
+                if item.parent:
+                    tree.append(item.get_info())
 
         return tree
 
