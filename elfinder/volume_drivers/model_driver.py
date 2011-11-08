@@ -151,3 +151,43 @@ class ModelVolumeDriver(BaseVolumeDriver):
         for object in self.get_tree(target):
             list.append(object['name'])
         return list
+
+    def paste(self, targets, source, dest, cut):
+        """ Moves/copies target files/directories from source to dest. """
+        source_dir = self.get_object(source)
+        dest_dir = self.get_object(dest)
+        added = []
+        removed = []
+        for target in targets:
+            object = self.get_object(target)
+            object.parent = dest_dir
+            if not cut:
+                # This is a copy so the original object should not be changed.
+                # Setting the id to None causes Django to insert a new model
+                # instead of updating the existing one.
+                object.id = None
+
+            # If an object with the same name already exists in the target
+            # directory, it should be deleted. This needs to be done for
+            # both Files and Directories. Using filter() and iterating
+            # over the results is a bit cleaner than using get() and checking
+            # if an object was returned, even though most of the time both
+            # querysets will be empty.
+            dirs = self.directory_model.objects.filter(name=object.name,
+                                                   parent=object.parent)
+            files = self.file_model.objects.filter(name=object.name,
+                                                  parent=object.parent)
+            for dir in dirs:
+                removed.append(dir.get_hash())
+                dir.delete()
+            for file in files:
+                removed.append(file.get_hash())
+                file.delete()
+
+            object.save()
+            added.append(object.get_info())
+            if cut:
+                removed.append(object.get_info()['hash'])
+
+        return {'added': added,
+                'removed': removed}

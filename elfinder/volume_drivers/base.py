@@ -79,3 +79,19 @@ class BaseVolumeDriver(object):
             in this directory.
         """
         raise NotImplementedError
+
+    def paste(self, targets, source, dest, cut):
+        """ Moves/copies target files/directories from source to dest.
+
+            If a file with the same name already exists in the dest directory
+            it should be overwritten (the client asks the user to confirm this
+            before sending the request).
+
+            :param targets: A list of hashes of files/dirs to move/copy.
+            :param source: The current parent of the targets.
+            :param dest: The new parent of the targets.
+            :param cut: Boolean. If true, move the targets. If false, copy the
+            targets.
+            :returns: dict -- a dict describing which targets were moved/copied.
+        """
+        raise NotImplementedError

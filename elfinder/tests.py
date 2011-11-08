@@ -243,6 +243,49 @@ class elFinderListCmd(elFinderCmdTest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Could not open target')
 
+class elFinderPasteCmd(elFinderCmdTest):
+    def test_valid_move(self):
+        vars = {'cmd': 'paste',
+                'targets[]': ['fc1_f1'],
+                'src': 'fc1_d2',
+                'dst': 'fc1_d3',
+                'cut': '1'}
+        response = self.get_json_response(vars)
+        added = response.json['added']
+        removed = response.json['removed']
+        self.assertEqual(len(added), 1)
+        self.assertEqual(len(removed), 1)
+
+    def test_invalid_move(self):
+        vars = {'cmd': 'paste',
+                'targets[]': ['fc1_f1234'],
+                'src': 'fc1_d2',
+                'dst': 'fc1_d3',
+                'cut': '1'}
+        response = self.get_json_response(vars, fail_on_error=False)
+        self.assertEqual(response.json['error'], 'Could not open target')
+
+    def test_valid_copy(self):
+        vars = {'cmd': 'paste',
+                'targets[]': ['fc1_f1'],
+                'src': 'fc1_d2',
+                'dst': 'fc1_d3',
+                'cut': '0'}
+        response = self.get_json_response(vars)
+        added = response.json['added']
+        removed = response.json['removed']
+        self.assertEqual(len(added), 1)
+        self.assertEqual(len(removed), 0)
+
+    def test_invalid_copy(self):
+        vars = {'cmd': 'paste',
+                'targets[]': ['fc1_f1234'],
+                'src': 'fc1_d2',
+                'dst': 'fc1_d3',
+                'cut': '0'}
+        response = self.get_json_response(vars, fail_on_error=False)
+        self.assertEqual(response.json['error'], 'Could not open target')
+
 class elFinderFileCmd(elFinderCmdTest):
     def setUp(self):
         super(elFinderFileCmd, self).setUp()

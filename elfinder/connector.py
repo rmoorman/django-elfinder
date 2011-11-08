@@ -52,6 +52,8 @@ class ElFinderConnector():
                 'mkfile': ('__mkfile', {'target': True, 'name': True}),
                 'rename': ('__rename', {'target': True, 'name': True}),
                 'ls': ('__list', {'target': True}),
+                'paste': ('__paste', {'targets[]': True, 'src': True,
+                                      'dst': True, 'cut': True}),
                }
 
     def get_init_params(self):
@@ -273,3 +275,15 @@ class ElFinderConnector():
         target = self.GET['target']
         volume = self.get_volume(target)
         self.response['list'] = volume.list(target)
+
+    def __paste(self):
+        """ TODO add support for pasting between volumes. """
+        targets = self.GET['targets[]']
+        source = self.GET['src']
+        dest = self.GET['dst']
+        cut = (self.GET['cut'] == '1')
+        source_volume = self.get_volume(source)
+        dest_volume = self.get_volume(dest)
+        if source_volume != dest_volume:
+            raise Exception('Moving between volumes is not supported.')
+        self.response.update(dest_volume.paste(targets, source, dest, cut))
