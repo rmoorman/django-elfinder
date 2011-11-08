@@ -95,3 +95,14 @@ class BaseVolumeDriver(object):
             :returns: dict -- a dict describing which targets were moved/copied.
         """
         raise NotImplementedError
+
+    def remove(self, target):
+        """ Deletes the target files/directories.
+
+            The 'rm' command takes a list of targets - this function is called
+            for each target, so should only delete one file/directory.
+
+            :param targets: A list of hashes of files/dirs to delete.
+            :returns: string -- the hash of the file/dir that was deleted.
+        """
+        raise NotImplementedError

@@ -77,6 +77,7 @@ class elFinderCmdTest(TestCase):
         response.json = json.loads(response.content)
 
         if fail_on_error:
+            self.assertTrue(response.status_code, 200)
             self.assertFalse('error' in response.json,
                 'JSON Response contained an error: ' + response.content)
         return response
@@ -85,12 +86,10 @@ class elFinderCmdTest(TestCase):
 class elFinderInvalidCmds(elFinderCmdTest):
     def test_unknown_cmd(self):
         response = self.get_json_response({'cmd': 'invalid_cmd_test'}, False)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Unknown command')
 
     def test_no_cmd(self):
         response = self.get_json_response({}, False)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'No command specified')
 
 
@@ -98,28 +97,24 @@ class elFinderOpenCmd(elFinderCmdTest):
     def test_invalid_args(self):
         vars = ({'cmd': 'open'})
         response = self.get_json_response(vars, fail_on_error=False)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Invalid arguments')
 
     def test_valid_open_empty_target(self):
         vars = ({'cmd': 'open',
                  'target': ''})
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
 
     def test_valid_open_empty_target_with_tree(self):
         vars = ({'cmd': 'open',
                  'target': '',
                  'tree': 1})
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
 
     def test_valid_open_with_tree(self):
         vars = ({'cmd': 'open',
                  'target': 'fc1_d2',
                  'tree': 1})
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
 
     def test_valid_open_with_init(self):
         vars = ({'cmd': 'open',
@@ -127,7 +122,6 @@ class elFinderOpenCmd(elFinderCmdTest):
                  'tree': 1,
                  'init': 1})
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['api'], '2.0')
 
 
@@ -135,7 +129,6 @@ class elFinderMkdirCmd(elFinderCmdTest):
     def test_invalid_args(self):
         vars = ({'cmd': 'mkdir'})
         response = self.get_json_response(vars, fail_on_error=False)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Invalid arguments')
 
     def test_valid_mkdir(self):
@@ -143,14 +136,12 @@ class elFinderMkdirCmd(elFinderCmdTest):
                  'target': 'fc1_d1',
                  'name': 'new dir'})
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
 
     def test_invalid_target(self):
         response = self.get_json_response({'cmd': 'mkdir',
                                            'target': 'does-not-exist',
                                            'name': 'new dir'},
                                            fail_on_error=False)
-        self.assertEqual(response.status_code, 200)
         expected_error = 'Invalid target hash: '
         self.assertTrue(response.json['error'].startswith(expected_error))
 
@@ -162,7 +153,6 @@ class elFinderMkdirCmd(elFinderCmdTest):
                  'name': 'dupe_dir_test'})
         response = self.get_json_response(vars)
         response = self.get_json_response(vars, fail_on_error=False)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'],
                          'Directory with this Name and Parent already exists.')
 
@@ -171,7 +161,6 @@ class elFinderMkfileCmd(elFinderCmdTest):
     def test_invalid_args(self):
         vars = ({'cmd': 'mkdir'})
         response = self.get_json_response(vars, fail_on_error=False)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Invalid arguments')
 
     def test_valid_mkfile(self):
@@ -179,7 +168,6 @@ class elFinderMkfileCmd(elFinderCmdTest):
                  'target': 'fc1_d1',
                  'name': 'test file.txt'})
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
 
     def test_duplicate_filename(self):
         """ Try to create two files with the same name and ensure it fails.
@@ -189,7 +177,6 @@ class elFinderMkfileCmd(elFinderCmdTest):
                  'name': 'dupe_filename_test'})
         response = self.get_json_response(vars)
         response = self.get_json_response(vars, fail_on_error=False)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'],
                          'File with this Name and Parent already exists.')
 
@@ -199,7 +186,6 @@ class elFinderParentsCmd(elFinderCmdTest):
         vars = {'cmd': 'parents',
                 'target': 'fc1_d1'}
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
 
 
 class elFinderTreeCmd(elFinderCmdTest):
@@ -207,7 +193,6 @@ class elFinderTreeCmd(elFinderCmdTest):
         vars = {'cmd': 'tree',
                 'target': 'fc1_d1'}
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
 
 
 class elFinderRenameCmd(elFinderCmdTest):
@@ -216,11 +201,8 @@ class elFinderRenameCmd(elFinderCmdTest):
                 'target': 'fc1_f1',
                 'name': 'new_name.html'}
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
-        added = response.json['added']
-        removed = response.json['removed']
-        self.assertEqual(added[0]['name'], 'new_name.html')
-        self.assertEqual(removed[0], 'fc1_f1')
+        self.assertEqual(response.json['added'][0]['name'], 'new_name.html')
+        self.assertEqual(response.json['removed'], ['fc1_f1'])
 
     def test_missing_name(self):
         vars = {'cmd': 'rename',
@@ -233,14 +215,12 @@ class elFinderListCmd(elFinderCmdTest):
         vars = {'cmd': 'ls',
                 'target': 'fc1_d1'}
         response = self.get_json_response(vars)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json['list']), 2)
 
     def test_invalid_dir(self):
         vars = {'cmd': 'ls',
                 'target': 'fc1_d1234'}
         response = self.get_json_response(vars, fail_on_error=False)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Could not open target')
 
 class elFinderPasteCmd(elFinderCmdTest):
@@ -251,10 +231,8 @@ class elFinderPasteCmd(elFinderCmdTest):
                 'dst': 'fc1_d3',
                 'cut': '1'}
         response = self.get_json_response(vars)
-        added = response.json['added']
-        removed = response.json['removed']
-        self.assertEqual(len(added), 1)
-        self.assertEqual(len(removed), 1)
+        self.assertEqual(len(response.json['added']), 1)
+        self.assertEqual(response.json['removed'], ['fc1_f1'])
 
     def test_invalid_move(self):
         vars = {'cmd': 'paste',
@@ -272,10 +250,8 @@ class elFinderPasteCmd(elFinderCmdTest):
                 'dst': 'fc1_d3',
                 'cut': '0'}
         response = self.get_json_response(vars)
-        added = response.json['added']
-        removed = response.json['removed']
-        self.assertEqual(len(added), 1)
-        self.assertEqual(len(removed), 0)
+        self.assertEqual(len(response.json['added']), 1)
+        self.assertEqual(response.json['removed'], [])
 
     def test_invalid_copy(self):
         vars = {'cmd': 'paste',
@@ -283,6 +259,20 @@ class elFinderPasteCmd(elFinderCmdTest):
                 'src': 'fc1_d2',
                 'dst': 'fc1_d3',
                 'cut': '0'}
+        response = self.get_json_response(vars, fail_on_error=False)
+        self.assertEqual(response.json['error'], 'Could not open target')
+
+class elFinderRemoveCmd(elFinderCmdTest):
+    def test_valid_remove(self):
+        vars = {'cmd': 'rm',
+                'targets[]': ['fc1_f1']}
+        response = self.get_json_response(vars)
+        removed = response.json['removed']
+        self.assertEqual(removed, ['fc1_f1'])
+
+    def test_invalid_remove(self):
+        vars = {'cmd': 'rm',
+                'targets[]': ['fc1_f1234']}
         response = self.get_json_response(vars, fail_on_error=False)
         self.assertEqual(response.json['error'], 'Could not open target')
 
@@ -303,7 +293,6 @@ class elFinderFileCmd(elFinderCmdTest):
         vars = ({'cmd': 'file',
                  'target': 'fc1_f1234'})
         response = self.get_json_response(vars, fail_on_error=False)
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['error'], 'Could not open target')
 
     def test_invalid_targets(self):
@@ -311,6 +300,5 @@ class elFinderFileCmd(elFinderCmdTest):
             vars = {'cmd': 'file',
                     'target': target}
             response = self.get_json_response(vars, fail_on_error=False)
-            self.assertEqual(response.status_code, 200)
             expected_error = 'Invalid target hash: '
             self.assertTrue(response.json['error'].startswith(expected_error))

@@ -54,6 +54,8 @@ class ElFinderConnector():
                 'ls': ('__list', {'target': True}),
                 'paste': ('__paste', {'targets[]': True, 'src': True,
                                       'dst': True, 'cut': True}),
+                'rename': ('__rename', {'target': True, 'name': True}),
+                'rm': ('__remove', {'targets[]': True}),
                }
 
     def get_init_params(self):
@@ -277,7 +279,6 @@ class ElFinderConnector():
         self.response['list'] = volume.list(target)
 
     def __paste(self):
-        """ TODO add support for pasting between volumes. """
         targets = self.GET['targets[]']
         source = self.GET['src']
         dest = self.GET['dst']
@@ -287,3 +288,12 @@ class ElFinderConnector():
         if source_volume != dest_volume:
             raise Exception('Moving between volumes is not supported.')
         self.response.update(dest_volume.paste(targets, source, dest, cut))
+
+    def __remove(self):
+        targets = self.GET['targets[]']
+        self.response['removed'] = []
+        # Because the targets might not all belong to the same volume, we need
+        # to lookup the volume and call the remove() function for every target.
+        for target in targets:
+            volume = self.get_volume(target)
+            self.response['removed'].append(volume.remove(target))

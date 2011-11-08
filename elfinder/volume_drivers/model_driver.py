@@ -191,3 +191,9 @@ class ModelVolumeDriver(BaseVolumeDriver):
 
         return {'added': added,
                 'removed': removed}
+
+    def remove(self, target):
+        """ Delete a File or Directory object. """
+        object = self.get_object(target)
+        object.delete()
+        return target
