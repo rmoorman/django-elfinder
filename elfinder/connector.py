@@ -56,6 +56,7 @@ class ElFinderConnector():
                                       'dst': True, 'cut': True}),
                 'rename': ('__rename', {'target': True, 'name': True}),
                 'rm': ('__remove', {'targets[]': True}),
+                'upload': ('__upload', {'target': True}),
                }
 
     def get_init_params(self):
@@ -304,3 +305,8 @@ class ElFinderConnector():
         for target in targets:
             volume = self.get_volume(target)
             self.response['removed'].append(volume.remove(target))
+
+    def __upload(self):
+        parent = self.data['target']
+        volume = self.get_volume(parent)
+        self.response.update(volume.upload(self.request.FILES, parent))

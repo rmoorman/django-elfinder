@@ -202,3 +202,27 @@ class ModelVolumeDriver(BaseVolumeDriver):
         object = self.get_object(target)
         object.delete()
         return target
+
+    def upload(self, files, parent):
+        """ For now, this uses a very naive way of storing files - the entire
+            file is read in to the File model's content field in one go.
+
+            This should be updated to use read_chunks to add the file one 
+            chunk at a time.
+        """
+        added = []
+        parent = self.get_object(parent)
+        for upload in files.getlist('upload[]'):
+            new_file = self.file_model(name=upload.name,
+                                       parent=parent,
+                                       collection=self.collection,
+                                       content=upload.read())
+            try:
+                new_file.validate_unique()
+            except ValidationError, e:
+                logger.exception(e)
+                raise Exception("\n".join(e.messages))
+
+            new_file.save()
+            added.append(new_file.get_info())
+        return {'added': added}

@@ -106,3 +106,13 @@ class BaseVolumeDriver(object):
             :returns: string -- the hash of the file/dir that was deleted.
         """
         raise NotImplementedError
+
+    def upload(self, files, parent):
+        """ Uploads one or more files in to the parent directory.
+
+            :param files: A list of uploaded file objects, as described here:
+            https://docs.djangoproject.com/en/dev/topics/http/file-uploads/
+            :param parent: The hash of the directory in which to create the
+            new files.
+            :returns: TODO
+        """

@@ -2,6 +2,8 @@ from django.test import TestCase
 from django.core.urlresolvers import reverse
 from elfinder.models import FileCollection, Directory, File
 from elfinder.volume_drivers.model_driver import ModelVolumeDriver
+import tempfile
+import shutil
 import json
 import logging
 
@@ -275,6 +277,43 @@ class elFinderRemoveCmd(elFinderCmdTest):
                 'targets[]': ['fc1_f1234']}
         response = self.get_json_response(vars, fail_on_error=False)
         self.assertEqual(response.json['error'], 'Could not open target')
+
+class elFinderUploadCmd(elFinderCmdTest):
+
+    def setUp(self):
+        # Create a temporary directory to use for uploading test files.
+        super(elFinderUploadCmd, self).setUp()
+        self.tmp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
+    
+    def get_file(self, name, content):
+        """ Creates and writes to a new file. Returns the open file handle.
+        """
+        fh = open(self.tmp_dir + '/' + name, 'w+')
+        fh.write(content + '\n')
+        return fh
+
+    def test_valid_upload(self):
+        fh = self.get_file('new_file.txt', 'testing')
+        vars = {'cmd': 'upload',
+                'target': 'fc1_d4',
+                'upload[]': fh}
+        response = self.get_json_response(vars)
+        fh.close()
+        
+    def test_dupe_filename_upload(self):
+        # The 'Dickens, Charles' directory already has a file with this name.
+        fh = self.get_file('A Tale of Two Cities', 'testing')
+        vars = {'cmd': 'upload',
+                'target': 'fc1_d4',
+                'upload[]': fh}
+        response = self.get_json_response(vars, fail_on_error=False)
+        fh.close()
+        self.assertEqual(response.json['error'],
+                         'File with this Name and Parent already exists.')
+        
 
 class elFinderFileCmd(elFinderCmdTest):
     def setUp(self):
