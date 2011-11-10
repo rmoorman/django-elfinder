@@ -302,6 +302,7 @@ class elFinderUploadCmd(elFinderCmdTest):
                 'upload[]': fh}
         response = self.get_json_response(vars)
         fh.close()
+        self.assertEqual(response.json['added'][0]['name'], 'new_file.txt')
         
     def test_dupe_filename_upload(self):
         # The 'Dickens, Charles' directory already has a file with this name.
