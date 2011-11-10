@@ -26,7 +26,7 @@ class ElFinderConnector():
         self.httpResponse = {}
         self.httpStatusCode = 200
         self.httpHeader = {'Content-type': 'application/json'}
-        self.GET = {}
+        self.data = {}
         self.response = {}
         self.return_view = None
 
@@ -99,9 +99,9 @@ class ElFinderConnector():
             of GET vars manually - they can assume that required items exist.
         """
         for field in command_variables:
-            if command_variables[field] == True and field not in self.GET:
+            if command_variables[field] == True and field not in self.data:
                 return False
-            elif command_variables[field] == False and field in self.GET:
+            elif command_variables[field] == False and field in self.data:
                 return False
         return True
 
@@ -143,20 +143,27 @@ class ElFinderConnector():
         """
 
         self.request = request
-        # Copy allowed parameters from the given request's GET to self.GET
+
+        # Is this a POST or a GET?
+        if request.method == 'POST':
+            data_source = request.POST
+        elif request.method == 'GET':
+            data_source = request.GET
+
+        # Copy allowed parameters from the given request's GET to self.data
         for field in self.get_allowed_http_params():
-            if field in request.GET:
+            if field in data_source:
                 if field == "targets[]":
-                    self.GET[field] = request.GET.getlist(field)
+                    self.data[field] = data_source.getlist(field)
                 else:
-                    self.GET[field] = request.GET[field]
+                    self.data[field] = data_source[field]
 
         # If a valid command has been specified, try and run it. Otherwise set
         # the relevant error message.
         commands = self.get_commands()
-        if 'cmd' in self.GET:
-            if self.GET['cmd'] in commands:
-                cmd = commands[self.GET['cmd']]
+        if 'cmd' in self.data:
+            if self.data['cmd'] in commands:
+                cmd = commands[self.data['cmd']]
                 self.run_command(cmd[0], cmd[1])
             else:
                 self.response['error'] = 'Unknown command'
@@ -176,7 +183,7 @@ class ElFinderConnector():
             rather a flat list of dicts which have hash and parent_hash (phash)
             values so the client can draw the tree.
         """
-        target = self.GET['target']
+        target = self.data['target']
         volume = self.get_volume(target)
         self.response['tree'] = volume.get_tree(target,
                                                 ancestors=True,
@@ -188,7 +195,7 @@ class ElFinderConnector():
             Sets response['tree'] - a list of children of the specified
             target Directory.
         """
-        target = self.GET['target']
+        target = self.data['target']
         volume = self.get_volume(target)
         self.response['tree'] = volume.get_tree(target)
 
@@ -199,7 +206,7 @@ class ElFinderConnector():
             as the response. A custom read_file_view can be given when
             initialising the connector.
         """
-        target = self.GET['target']
+        target = self.data['target']
         volume = self.get_volume(target)
 
         # A file was requested, so set return_view to the read_file view.
@@ -221,14 +228,14 @@ class ElFinderConnector():
             currently-opened volumes is returned. The root of the first
             volume is considered to be the current directory.
         """
-        if 'tree' in self.GET and self.GET['tree'] == '1':
+        if 'tree' in self.data and self.data['tree'] == '1':
             inc_ancestors = True
             inc_siblings = True
         else:
             inc_ancestors = False
             inc_siblings = False
 
-        target = self.GET['target']
+        target = self.data['target']
         if target == '':
             # No target was specified, which means the client is being opened
             # for the first time and requires information about all currently
@@ -255,34 +262,34 @@ class ElFinderConnector():
 
         # If the request includes 'init', add some client initialisation
         # data to the response.
-        if 'init' in self.GET:
+        if 'init' in self.data:
             self.response.update(self.get_init_params())
 
     def __mkdir(self):
-        target = self.GET['target']
+        target = self.data['target']
         volume = self.get_volume(target)
-        self.response['added'] = [volume.mkdir(self.GET['name'], target)]
+        self.response['added'] = [volume.mkdir(self.data['name'], target)]
 
     def __mkfile(self):
-        target = self.GET['target']
+        target = self.data['target']
         volume = self.get_volume(target)
-        self.response['added'] = [volume.mkfile(self.GET['name'], target)]
+        self.response['added'] = [volume.mkfile(self.data['name'], target)]
 
     def __rename(self):
-        target = self.GET['target']
+        target = self.data['target']
         volume = self.get_volume(target)
-        self.response.update(volume.rename(self.GET['name'], target))
+        self.response.update(volume.rename(self.data['name'], target))
 
     def __list(self):
-        target = self.GET['target']
+        target = self.data['target']
         volume = self.get_volume(target)
         self.response['list'] = volume.list(target)
 
     def __paste(self):
-        targets = self.GET['targets[]']
-        source = self.GET['src']
-        dest = self.GET['dst']
-        cut = (self.GET['cut'] == '1')
+        targets = self.data['targets[]']
+        source = self.data['src']
+        dest = self.data['dst']
+        cut = (self.data['cut'] == '1')
         source_volume = self.get_volume(source)
         dest_volume = self.get_volume(dest)
         if source_volume != dest_volume:
@@ -290,7 +297,7 @@ class ElFinderConnector():
         self.response.update(dest_volume.paste(targets, source, dest, cut))
 
     def __remove(self):
-        targets = self.GET['targets[]']
+        targets = self.data['targets[]']
         self.response['removed'] = []
         # Because the targets might not all belong to the same volume, we need
         # to lookup the volume and call the remove() function for every target.

@@ -61,7 +61,7 @@ class elFinderCmdTest(TestCase):
     def get_command_response(self, variables={}):
         """ Helper function to issue commands to the connector.
         """
-        return self.client.get(reverse('elfinder_connector',
+        return self.client.post(reverse('elfinder_connector',
                                         args=[self.collection.id]),
                                         variables)
 
