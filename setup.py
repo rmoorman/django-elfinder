@@ -10,5 +10,5 @@ setup(name='django-elfinder',
       url='https://github.com/mikery/django-elfinder/',
       download_url='https://github.com/mikery/django-elfinder/tarball/v0.2',
       packages=['elfinder'],
-      requires=['django (>=1.3)', 'mptt (>=0.5.2)'],
+      requires=['django (>=1.3)', 'django-mptt (>=0.5.2)'],
       )
